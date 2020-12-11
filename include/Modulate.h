@@ -11,7 +11,7 @@ using uint8_t = unsigned char;
 
 struct IModulate
 {
-    enum { Generic=0, AVX, AVX512, CUDA };
+    enum { Generic=0, Generic1, Generic2, AVX, AVX512, CUDA };
     static IModulate* createInstance(const char* type, unsigned hint=Generic);
     virtual uint8_t* allocMem(unsigned numElements) = 0;
     virtual void freeMem(uint8_t*) = 0;

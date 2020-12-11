@@ -13,7 +13,8 @@ void printValidModules(const std::map<std::string, test_fcn_t> &Modules) {
     std::cout << std::endl;
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     std::map<std::string, test_fcn_t> Modules =
     {
         {"mod",    test_modulate},
@@ -29,5 +30,5 @@ int main(int argc, char** argv) {
         return 1;
     }
     auto m = it->second;
-    return m(argc - 1, argv + 1);
+    return m(argc - 2, argv + 2);
 }

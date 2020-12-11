@@ -1,19 +1,23 @@
 //
 // Created by barabasz on 09.12.2020.
 //
+#include <stdlib.h>
 #include <Modulate.h>
 #include <string.h>
+#include <immintrin.h>
+#define ALIGNED(x) __attribute__((aligned(x)))
 
 template <int ALIGN>
 struct AVXAlloc : IModulate
 {
     uint8_t* allocMem(unsigned numElements) override
     {
-        return new uint8_t[numElements];
+        constexpr auto bytesInWord = ALIGN / 8;
+        return reinterpret_cast<uint8_t*>( aligned_alloc(bytesInWord, numElements + (numElements % bytesInWord) * bytesInWord) );
     }
     void freeMem(uint8_t* ptr) override
     {
-        delete[] ptr;
+        free(ptr);
     }
     void release() override
     {
@@ -23,8 +27,32 @@ struct AVXAlloc : IModulate
 
 struct AVXQPSK : AVXAlloc<256>
 {
+    static constexpr int16_t POS = 0x16A1;
+    static constexpr int16_t NEG = 0xE95F;
+    static constexpr /*ALIGNED(32)*/ cint16_t qpsk_lut[] = {
+            cint16_t(POS, POS),
+            cint16_t(NEG, POS),
+            cint16_t(POS, NEG),
+            cint16_t(NEG, NEG)
+    };
     void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
     {
+        const __m256i all = _mm256_loadu2_m128i(reinterpret_cast<const __m128i *>(qpsk_lut),reinterpret_cast<const __m128i *>(qpsk_lut));
+        const __m128i load_mask = _mm_setr_epi32 (1, 0, 0, 0);
+
+        auto numWords = numSymbols / 8;
+        if (numWords) {
+            while(--numWords > 0)
+            {
+                __m128i cw1 = _mm_maskload_epi32 (reinterpret_cast<const int *>(dataIn), load_mask);
+                __m256i cw2 = _mm256_broadcastd_epi32 (cw1);
+            }
+        }
+
+        for (numSymbols = numSymbols % 8;numSymbols>0;--numSymbols)
+        {
+
+        }
     }
 };
 

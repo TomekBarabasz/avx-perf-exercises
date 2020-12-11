@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(MODULES
     ./src/Modulate.cpp
     ./src/Demodulate.cpp
-)
+        include/common.h)
 
 add_executable(perf_test src/main.cpp ${MODULES})
 add_subdirectory(src/modulate)
