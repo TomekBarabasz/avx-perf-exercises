@@ -6,7 +6,7 @@
 
 struct GenericAlloc : IModulate
 {
-    uint8_t* allocMem(unsigned numElements) override
+    uint8_t* allocMem(long long numElements) override
     {
         return new uint8_t[numElements];
     }
@@ -26,11 +26,11 @@ struct GenericQPSK : GenericAlloc
     static constexpr int16_t QPSK_NEG1 = 0xE95F;
     static constexpr int BitsPerCodeword = 2;
     static constexpr int16_t qpsk_lut[] = {QPSK_POS1, QPSK_NEG1};
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
         int shift = 0;
         int16_t *pout = reinterpret_cast<int16_t*>(dataOut);
-        for (unsigned is=0; is<numSymbols; ++is)
+        for (long long is=0; is<numSymbols; ++is)
         {
             const auto codeword = *dataIn >> shift;
             *pout++ = qpsk_lut[codeword & 1 ? 1 : 0];
@@ -56,11 +56,11 @@ struct Generic1QPSK : GenericAlloc
         cint16_t(NEG, NEG)
     };
 
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
         int shift = 0;
         int16_t *pout = reinterpret_cast<int16_t*>(dataOut);
-        for (unsigned is=0; is<numSymbols; ++is)
+        for (long long is=0; is<numSymbols; ++is)
         {
             const auto codeword = *dataIn >> shift;
             *dataOut++ = qpsk_lut[codeword];
@@ -79,14 +79,14 @@ struct Generic2QPSK : GenericAlloc
     static constexpr int16_t QPSK_NEG1 = 0xE95F;
     static constexpr int BitsPerCodeword = 2;
     static constexpr int16_t qpsk_lut[] = {QPSK_POS1, QPSK_NEG1};
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
     }
 };
 
 struct Generic16QAM : GenericAlloc
 {
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
 
     }
@@ -94,7 +94,7 @@ struct Generic16QAM : GenericAlloc
 
 struct Generic64QAM : GenericAlloc
 {
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
 
     }
@@ -102,7 +102,7 @@ struct Generic64QAM : GenericAlloc
 
 struct Generic256QAM : GenericAlloc
 {
-    void modulate(uint8_t* dataIn, cint16_t* dataOut, unsigned numSymbols) override
+    void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
 
     }

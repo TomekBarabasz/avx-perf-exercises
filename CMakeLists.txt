@@ -4,8 +4,8 @@ project(perf_test)
 set(CMAKE_CXX_STANDARD 17)
 
 set(MODULES
-    ./src/Modulate.cpp
-    ./src/Demodulate.cpp
+    ./src/TestModulate.cpp
+    ./src/TestDemodulate.cpp
         include/common.h)
 
 add_executable(perf_test src/main.cpp ${MODULES})

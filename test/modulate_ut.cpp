@@ -56,3 +56,61 @@ TEST(GenericModulateTests, TestQPSK_5cw)
 
     mod->release();
 }
+
+TEST(AvxModulateTests, TestQPSK_1cw)
+{
+    auto mod = IModulate::createInstance("qpsk", IModulate::AVX);
+    ASSERT_NE(mod, nullptr);
+
+    auto pin  = mod->allocMem(1);
+    auto pout = reinterpret_cast<cint16_t*>(mod->allocMem(4));
+
+    uint8_t& codeword = *pin;
+    cint16_t& symbol  = *pout;
+
+    codeword = 0;
+    mod->modulate(pin, pout, 1);
+    ASSERT_EQ(symbol, sym00);
+
+    codeword = 1;
+    mod->modulate(pin, pout, 1);
+    ASSERT_EQ(symbol, sym01);
+
+    codeword = 2;
+    mod->modulate(pin, pout, 1);
+    ASSERT_EQ(symbol, sym10);
+
+    codeword = 3;
+    mod->modulate(pin, pout, 1);
+    ASSERT_EQ(symbol, sym11);
+
+    mod->freeMem(pin);
+    mod->freeMem((uint8_t*)pout);
+    mod->release();
+}
+
+TEST(AvxModulateTests, TestQPSK_8cw)
+{
+    constexpr unsigned NumCodewords = 8;
+    auto mod = IModulate::createInstance("qpsk", IModulate::AVX);
+    ASSERT_NE(mod, nullptr);
+
+    auto pin = mod->allocMem((2 * NumCodewords +7)/ 8);
+    auto pout = reinterpret_cast<cint16_t*>(mod->allocMem(NumCodewords * sizeof(cint16_t)));
+
+    pin[0] = 0b11100100;
+    pin[1] = 0b00011011;
+    cint16_t& symbol = *pout;
+
+    const cint16_t* Expected[] = { &sym00, &sym01, &sym10, &sym11 };
+    mod->modulate(pin, pout, NumCodewords);
+    for (int i = 0; i < NumCodewords; ++i)
+    {
+        const auto cw = (pin[i / 4] >> 2*(i % 4)) & 0b11;
+        ASSERT_EQ(pout[i], *(Expected[cw]));
+    }
+
+    mod->freeMem(pin);
+    mod->freeMem((uint8_t*)pout);
+    mod->release();
+}
