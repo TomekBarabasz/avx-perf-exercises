@@ -20,12 +20,19 @@ struct GenericAlloc : IModulate
     }
 };
 
+static constexpr int16_t QPSK_POS1 = 0x16A1;    //1/sqrt(2)
+static constexpr int16_t QPSK_NEG1 = 0xE95F;
+static constexpr int16_t qpsk_lut_short[] = {QPSK_POS1, QPSK_NEG1};
+static constexpr cint16_t qpsk_lut_long[] = {
+        cint16_t(QPSK_POS1, QPSK_POS1),
+        cint16_t(QPSK_NEG1, QPSK_POS1),
+        cint16_t(QPSK_POS1, QPSK_NEG1),
+        cint16_t(QPSK_NEG1, QPSK_NEG1)
+};
+
 struct GenericQPSK : GenericAlloc
 {
-    static constexpr int16_t QPSK_POS1 = 0x16A1;    //1/sqrt(2)
-    static constexpr int16_t QPSK_NEG1 = 0xE95F;
     static constexpr int BitsPerCodeword = 2;
-    static constexpr int16_t qpsk_lut[] = {QPSK_POS1, QPSK_NEG1};
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
         int shift = 0;
@@ -33,8 +40,8 @@ struct GenericQPSK : GenericAlloc
         for (long long is=0; is<numSymbols; ++is)
         {
             const auto codeword = *dataIn >> shift;
-            *pout++ = qpsk_lut[codeword & 1 ? 1 : 0];
-            *pout++ = qpsk_lut[codeword & 2 ? 1 : 0];
+            *pout++ = qpsk_lut_short[codeword & 1 ? 1 : 0];
+            *pout++ = qpsk_lut_short[codeword & 2 ? 1 : 0];
             shift += BitsPerCodeword;
             if (8 == shift){
                 shift = 0;
@@ -46,24 +53,14 @@ struct GenericQPSK : GenericAlloc
 
 struct Generic1QPSK : GenericAlloc
 {
-    static constexpr int16_t POS = 0x16A1;
-    static constexpr int16_t NEG = 0xE95F;
     static constexpr int BitsPerCodeword = 2;
-    static constexpr cint16_t qpsk_lut[] = {
-        cint16_t(POS, POS),
-        cint16_t(NEG, POS),
-        cint16_t(POS, NEG),
-        cint16_t(NEG, NEG)
-    };
-
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
         int shift = 0;
-        int16_t *pout = reinterpret_cast<int16_t*>(dataOut);
         for (long long is=0; is<numSymbols; ++is)
         {
             const auto codeword = *dataIn >> shift;
-            *dataOut++ = qpsk_lut[codeword];
+            *dataOut++ = qpsk_lut_long[codeword & 3];
             shift += BitsPerCodeword;
             if (8 == shift){
                 shift = 0;
@@ -75,10 +72,6 @@ struct Generic1QPSK : GenericAlloc
 
 struct Generic2QPSK : GenericAlloc
 {
-    static constexpr int16_t QPSK_POS1 = 0x16A1;    //1/sqrt(2)
-    static constexpr int16_t QPSK_NEG1 = 0xE95F;
-    static constexpr int BitsPerCodeword = 2;
-    static constexpr int16_t qpsk_lut[] = {QPSK_POS1, QPSK_NEG1};
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
     }
@@ -107,7 +100,6 @@ struct Generic256QAM : GenericAlloc
 
     }
 };
-
 
 IModulate* createGenericModulate(const char* type, unsigned int hint)
 {

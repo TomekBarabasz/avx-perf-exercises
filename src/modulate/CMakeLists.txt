@@ -6,5 +6,6 @@ target_include_directories(modulate PUBLIC
 target_compile_options(modulate PRIVATE
     -O2
     -mavx2
+    -mavx512f
 )
 

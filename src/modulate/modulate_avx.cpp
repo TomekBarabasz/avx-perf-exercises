@@ -32,6 +32,7 @@ struct AVXAlloc : IModulate
     uint8_t* allocMem(long long numElements) override
     {
         constexpr auto bytesInWord = ALIGN / 8;
+        //return reinterpret_cast<uint8_t*>(aligned_alloc(bytesInWord, numElements + (numElements % bytesInWord) * bytesInWord) );
         return reinterpret_cast<uint8_t*>(aligned_alloc(bytesInWord, numElements + (numElements % bytesInWord) * bytesInWord) );
     }
     void freeMem(uint8_t* ptr) override
@@ -48,7 +49,7 @@ struct AVXQPSK : AVXAlloc<256>
 {
     static constexpr int16_t POS = 0x16A1;
     static constexpr int16_t NEG = 0xE95F;
-    static constexpr /*ALIGNED(32)*/ cint16_t qpsk_lut[] = {
+    static constexpr ALIGNED(32) cint16_t qpsk_lut[] = {
             cint16_t(POS, POS),
             cint16_t(NEG, POS),
             cint16_t(POS, NEG),
@@ -57,7 +58,9 @@ struct AVXQPSK : AVXAlloc<256>
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
         const __m256i all = _mm256_loadu2_m128i(reinterpret_cast<const __m128i *>(qpsk_lut),reinterpret_cast<const __m128i *>(qpsk_lut));
-        const __m128i load_mask = _mm_setr_epi32 (uint32_t(-1), 0, 0, 0);
+        //const __m128i lut = _mm_load_si128(reinterpret_cast<const __m128i *>(qpsk_lut));
+        //const __m256i all = _mm256_broadcastsi128_si256(lut);
+
         const __m256i shift = _mm256_setr_epi32 (0,2,4,6,8,10,12,14);
         const __m256i mask = _mm256_set1_epi32(3);
 
@@ -65,36 +68,42 @@ struct AVXQPSK : AVXAlloc<256>
         auto numWords = numSymbols / 8;
         auto ending = numSymbols % 8;
         if (ending) ++numWords;
-        std::cout << "num 16bit words " << numWords << std::endl;
-        __m256i symbols;
-        if (numWords) 
+        while(numWords-- > 0)
         {
-            while(numWords-- > 0)
+            __m256i cw2 = _mm256_set1_epi32( *reinterpret_cast<short*>(dataIn) );
+            __m256i cw3 = _mm256_srav_epi32(cw2, shift);
+            cw3 = _mm256_and_si256(cw3, mask);
+            __m256i symbols = _mm256_permutevar8x32_epi32(all, cw3);
+            if (numWords > 0 || 0 == ending)
             {
-                __m128i cw1 = _mm_maskload_epi32 (reinterpret_cast<const int*>(dataIn), load_mask);
-                __m256i cw2 = _mm256_broadcastd_epi32 (cw1);
-                __m256i cw3 = _mm256_srav_epi32(cw2, shift);
-                cw3 = _mm256_and_si256(cw3, mask);
-                symbols = _mm256_permutevar8x32_epi32(all, cw3);
                 _mm256_store_si256(pout, symbols);
                 pout++;
                 dataIn += 2;
+            }else
+            {
+                __m256i m = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+                const __m256i e = _mm256_set1_epi32((int)ending);
+                m = _mm256_sub_epi32(m, e);
+                _mm256_maskstore_epi32(reinterpret_cast<int*>(pout), m, symbols);
             }
-        }
-        if (ending) 
-        {
-            __m256i m = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
-            const __m256i e = _mm256_set1_epi32((int)ending);
-            m = _mm256_sub_epi32(m, e);
-            _mm256_maskstore_epi32(reinterpret_cast<int*>(pout), mask, symbols);
         }
     }
 };
 
 struct AVX16QAM : AVXAlloc<256>
 {
+    static constexpr int16_t POS = 0x16A1;
+    static constexpr int16_t NEG = 0xE95F;
+    static constexpr ALIGNED(32) cint16_t qpsk_lut[] = {
+            cint16_t(POS, POS),
+            cint16_t(NEG, POS),
+            cint16_t(POS, NEG),
+            cint16_t(NEG, NEG)
+    };
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
+        const __m128i lut = _mm_load_si128(reinterpret_cast<const __m128i *>(qpsk_lut));
+
     }
 };
 
@@ -114,8 +123,26 @@ struct AVX256QAM : AVXAlloc<256>
 
 struct AVX512_QPSK : AVXAlloc<512>
 {
+    static constexpr int16_t POS = 0x16A1;
+    static constexpr int16_t NEG = 0xE95F;
+    static constexpr ALIGNED(32) cint16_t qpsk_lut[] = {
+            cint16_t(POS, POS),
+            cint16_t(NEG, POS),
+            cint16_t(POS, NEG),
+            cint16_t(NEG, NEG)
+    };
     void modulate(uint8_t* dataIn, cint16_t* dataOut, long long numSymbols) override
     {
+        auto pout = reinterpret_cast<__m256i*>(dataOut);
+        auto numWords = numSymbols / 8;
+        auto ending = numSymbols % 8;
+        if (ending) ++numWords;
+        if (numWords) {
+            while (numWords-- > 0)
+            {
+                __m512i cw1 = _mm512_set1_epi32(*reinterpret_cast<const int*>(dataIn));
+            }
+        }
     }
 };
 

@@ -12,9 +12,10 @@ IModulate* createCUDAModulate(const char*) { return nullptr;}
 IModulate* IModulate::createInstance(const char *type, unsigned int hint) {
     switch (hint) {
     default:
-    case Generic:   return createGenericModulate(type,  hint);
-    case Generic1:   return createGenericModulate(type, hint);
-    case Generic2:   return createGenericModulate(type, hint);
+    case Generic:
+    case Generic1:
+    case Generic2:
+        return createGenericModulate(type, hint);
     case AVX:       return createAvxModulate(type);
     case AVX512:    return createAvx512Modulate(type);
     case CUDA:      return createCUDAModulate(type);

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17)
+cmake_minimum_required(VERSION 3.16)
 project(perf_test)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -13,6 +13,7 @@ add_subdirectory(src/modulate)
 add_subdirectory(test)
 target_include_directories(perf_test PUBLIC
     ./include
+    ../oneTBB/include
 )
 target_link_libraries(perf_test
         stdc++

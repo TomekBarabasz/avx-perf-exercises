@@ -9,8 +9,6 @@
 #include <cassert>
 #include <map>
 #include <string>
-#include <thread>
-#include <ppl.h>
 
 int getCodewordSize(const char *modType)
 {
@@ -40,6 +38,9 @@ int implementationTypeToHint(const char *implType)
     else return IModulate::Generic;
 }
 
+#ifdef __WIN64
+#include <ppl.h>
+#include <thread>
 void generate_codewords(uint8_t* data, long long numBytes)
 {
     using namespace concurrency;
@@ -71,7 +72,49 @@ void generate_codewords(uint8_t* data, long long numBytes)
         }
     });
 }
+#endif
 
+#ifdef __linux__
+void generate_codewords(uint8_t* data, long long numBytes)
+{
+    std::random_device dev;
+    std::mt19937 gen(dev());
+
+    const auto numBytesInWord = sizeof(std::mt19937::result_type);
+    auto numWords = numBytes / numBytesInWord;
+    while (numWords-- > 0) {
+        *reinterpret_cast<std::mt19937::result_type*>(data) = gen();
+        data += numBytesInWord;
+    }
+    numBytes = numBytes % numBytesInWord;
+    if (numBytes > 0)
+    {
+        auto lastDword = gen();
+        while (numBytes-- > 0) {
+            *data++ = lastDword & 0xFF;
+            lastDword >>= 8;
+        }
+    }
+}
+#endif
+size_t get_num_codewords(const char* str)
+{
+    if (str[0]== '2' && str[1] == '^')	return 1ll << std::atoll(str+2);
+    else	return std::atoll(str);
+}
+std::string num_codewords(long long nc)
+{
+    const auto Kilo = 1024ll;
+    const auto Mega = 1024ll*1024ll;
+    const auto Giga = 1024ll*1024ll*1024ll;
+
+    std::ostringstream ss;
+    if (nc < Kilo) ss << nc;
+    else if (nc < Mega) ss << nc/Kilo << "K";
+    else if (nc < Giga) ss << nc/Mega << "M";
+    else ss << nc/Giga << "G";
+    return ss.str();
+}
 int test_modulate(int argc, char** argv)
 {
     if (argc < 2){
@@ -79,11 +122,12 @@ int test_modulate(int argc, char** argv)
         return 1;
     }
 
-    const auto numCodewords = std::atoll(argv[0] );
+    const auto numCodewords = get_num_codewords(argv[0]);
     const auto modulationType = argv[1];
-    const auto implementationType = argc == 3 ? argv[2] : "generic";
+    const auto implementationType = argc >= 3 ? argv[2] : "gen";
+    const bool test_results = (argc == 4 && 0==strcmp(argv[3],"test"));
     const auto cwSize = getCodewordSize(modulationType);
-    std::cout << "Modulate test function: numCodewords " << numCodewords << " modulation " << modulationType << " implementation " << implementationType << std::endl;
+    std::cout << "Modulate test function: " << num_codewords(numCodewords) << " codewords, modulation " << modulationType << " implementation " << implementationType << std::endl;
 
     auto mod = IModulate::createInstance(modulationType, implementationTypeToHint(implementationType));
     const auto numBytes = (numCodewords * cwSize + 7 ) / 8;
@@ -99,6 +143,22 @@ int test_modulate(int argc, char** argv)
     mm.start();
     mod->modulate(inputData, outputData, numCodewords);
     std::cout << "execution time : " << mm.elapsed() << std::endl;
+
+    if (test_results)
+    {
+        auto tmod = IModulate::createInstance(modulationType, IModulate::Generic);
+        std::cout << "testing results ... ";
+        mm.start();
+        auto *outputData2 = reinterpret_cast<cint16_t*>( mod->allocMem(numCodewords * sizeof(cint16_t)) );
+        tmod->modulate(inputData, outputData2, numCodewords);
+        for (size_t i=0; i<numCodewords;++i){
+            assert(outputData[i] == outputData2[i]);
+        }
+        std::cout << "done in " << mm.elapsed() << std::endl;
+        tmod->freeMem(reinterpret_cast<uint8_t*>(outputData2));
+        tmod->release();
+    }
+
     mod->freeMem(inputData);
     mod->freeMem(reinterpret_cast<uint8_t*>(outputData));
     mod->release();
